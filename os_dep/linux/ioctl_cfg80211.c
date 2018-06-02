@@ -740,11 +740,12 @@ check_bss:
 
 		RTW_INFO(FUNC_ADPT_FMT" call cfg80211_roamed\n", FUNC_ADPT_ARG(padapter));
 		cfg80211_roamed(padapter->pnetdev
-			#if (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 39) && LINUX_VERSION_CODE < KERNEL_VERSION(4, 12, 0)) || defined(COMPAT_KERNEL_RELEASE)
+			#if ((LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 39) && LINUX_VERSION_CODE < KERNEL_VERSION(4, 12, 0)) || defined(COMPAT_KERNEL_RELEASE))
 			, notify_channel
 			#elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0)
 			, &roam_info, GFP_ATOMIC);
-			#else
+			#endif
+			#if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 12, 0))
 			, cur_network->network.MacAddress
 			, pmlmepriv->assoc_req + sizeof(struct rtw_ieee80211_hdr_3addr) + 2
 			, pmlmepriv->assoc_req_len - sizeof(struct rtw_ieee80211_hdr_3addr) - 2
