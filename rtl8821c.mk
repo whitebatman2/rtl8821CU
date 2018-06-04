@@ -13,10 +13,12 @@ endif
 
 ifeq ($(CONFIG_PLATFORM_NV_TK1), n)
 ifeq ($(CONFIG_PLATFORM_RTK129X), n)
+ifeq ($(CONFIG_PLATFORM_ARM_RPI), n)
 ifeq ($(CONFIG_MP_INCLUDED), y)
 ### 8821C Default Enable VHT MP HW TX MODE ###
 EXTRA_CFLAGS += -DCONFIG_MP_VHT_HW_TX_MODE
 CONFIG_MP_VHT_HW_TX_MODE = y
+endif
 endif
 endif
 endif
