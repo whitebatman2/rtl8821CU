@@ -22,11 +22,11 @@ to
 ```
 CONFIG_PLATFORM_I386_PC = n
 CONFIG_PLATFORM_ARM_RPI = y
-CONFIG_PLATFORM_ARM_RPI = n
+CONFIG_PLATFORM_ARM_RPI3 = n
 ```
-For the Raspberry Pi 3 Model B you need to change it to
+For the Raspberry Pi 3 you need to change it to
 ```
 CONFIG_PLATFORM_I386_PC = n
 CONFIG_PLATFORM_ARM_RPI = n
-CONFIG_PLATFORM_ARM_RPI = y
+CONFIG_PLATFORM_ARM_RPI3 = y
 ```
