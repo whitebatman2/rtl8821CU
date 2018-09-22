@@ -74,6 +74,7 @@ CONFIG_APPEND_VENDOR_IE_ENABLE = n
 CONFIG_RTW_NAPI = y
 CONFIG_RTW_GRO = y
 ########################## Debug ###########################
+CONFIG_DISABLE_PHYDM_DEBUG_FUNCTION = y
 CONFIG_RTW_DEBUG = n
 # default log level is _DRV_INFO_ = 4,
 # please refer to "How_to_set_driver_debug_log_level.doc" to set the available level.
@@ -1057,6 +1058,10 @@ endif
 ifeq ($(CONFIG_RTW_DEBUG), y)
 EXTRA_CFLAGS += -DCONFIG_RTW_DEBUG
 EXTRA_CFLAGS += -DRTW_LOG_LEVEL=$(CONFIG_RTW_LOG_LEVEL)
+endif
+
+ifeq ($(CONFIG_DISABLE_PHYDM_DEBUG_FUNCTION), y)
+EXTRA_CFLAGS += -DCONFIG_DISABLE_PHYDM_DEBUG_FUNCTION
 endif
 
 EXTRA_CFLAGS += -DDM_ODM_SUPPORT_TYPE=0x04
