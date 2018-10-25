@@ -5,6 +5,35 @@ Drivers for rtl8811CU and rtl8821CU Wi-Fi chipsets forked from [whitebatman2/rtl
 
 This repository is based on soruce code found on a CD shipped with a rtl8811CU based card. It's updated to build on newer kernel versions. A simple line was added to allow this driver to work with the latest hardware revision of the DWA-171 C1 wifi dongle!
 
+## Mind the architecture: i386 or ARM?
+You might need to set correct the platform in the Makefile.
+
+For Intel, change it to:
+```
+CONFIG_PLATFORM_I386_PC = y
+CONFIG_PLATFORM_ARM_RPI = n
+CONFIG_PLATFORM_ARM_RPI3 = n
+```
+For ARMv7:
+```
+CONFIG_PLATFORM_I386_PC = n
+CONFIG_PLATFORM_ARM_RPI = y
+CONFIG_PLATFORM_ARM_RPI3 = n
+```
+For ARMv8:
+```
+CONFIG_PLATFORM_I386_PC = n
+CONFIG_PLATFORM_ARM_RPI = n
+CONFIG_PLATFORM_ARM_RPI3 = y
+```
+
+## Build and install without DKMS
+Use following commands in source directory:
+```
+make
+sudo make install
+sudo modprobe 8821cu
+```
 ## Build and install with DKMS
 
 DKMS is a system which will automatically recompile and install a kernel module when a new kernel gets installed or updated. To make use of DKMS, install the dkms package, which on Debian (based) systems is done like this:
@@ -27,30 +56,4 @@ If you later on want to remove it again, do the following:
     DRV_VERSION=5.2.5.3
     sudo dkms remove ${DRV_NAME}/${DRV_VERSION} --all
 
-## Build and install without DKMS
-Use following commands in source directory:
-```
-make
-sudo make install
-sudo modprobe 8821cu
-```
-## Raspberry Pi or ARM
-To build this driver on Raspberry Pi you need to set correct platform in Makefile.
-Change
-```
-CONFIG_PLATFORM_I386_PC = y
-CONFIG_PLATFORM_ARM_RPI = n
-CONFIG_PLATFORM_ARM_RPI3 = n
-```
-to
-```
-CONFIG_PLATFORM_I386_PC = n
-CONFIG_PLATFORM_ARM_RPI = y
-CONFIG_PLATFORM_ARM_RPI3 = n
-```
-For the Raspberry Pi 3 you need to change it to
-```
-CONFIG_PLATFORM_I386_PC = n
-CONFIG_PLATFORM_ARM_RPI = n
-CONFIG_PLATFORM_ARM_RPI3 = y
-```
+
