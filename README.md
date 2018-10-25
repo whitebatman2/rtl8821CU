@@ -22,7 +22,7 @@ CONFIG_PLATFORM_ARM_RPI3 = n
 ```
 For ARMv8:
 ```
-CONFIG_PLATFORM_I386_PC = n
+CONFIGx_PLATFORM_I386_PC = n
 CONFIG_PLATFORM_ARM_RPI = n
 CONFIG_PLATFORM_ARM_RPI3 = y
 ```
@@ -55,5 +55,13 @@ If you later on want to remove it again, do the following:
     DRV_NAME=rtl8821CU
     DRV_VERSION=5.2.5.3
     sudo dkms remove ${DRV_NAME}/${DRV_VERSION} --all
+    
+## Final step: add this script!!!
+The USB Wifi Dongle has a small storage partition with the Windows drivers inside that gets mounted before the wifi adapter itself. Follow these steps to ensure the Wi-Fi adapter is mounted with the stick is inserted!
 
+```
+chmod +x automountDWA171.sh
+sudo ./automountDWA171.sh
+```
+You're done.
 
