@@ -1,7 +1,9 @@
 # rtl8821CU
-[![Build Status](https://travis-ci.org/whitebatman2/rtl8821CU.svg?branch=master)](https://travis-ci.org/whitebatman2/rtl8821CU)
 
-Drivers for rtl8811CU and rtl8821CU Wi-Fi chipsets. This repository is based on soruce code found on a CD shipped with a rtl8811CU based card. It's updated to build on newer kernel versions.
+Drivers for rtl8811CU and rtl8821CU Wi-Fi chipsets forked from [whitebatman2/rtl8821CU](https://github.com/whitebatman2/rtl8821CU). 
+
+
+This repository is based on soruce code found on a CD shipped with a rtl8811CU based card. It's updated to build on newer kernel versions. A simple line was added to allow this driver to work with the latest hardware revision of the DWA-171 C1 wifi dongle!
 
 ## Build and install with DKMS
 
@@ -32,7 +34,7 @@ make
 sudo make install
 sudo modprobe 8821cu
 ```
-## Raspberry Pi
+## Raspberry Pi or ARM
 To build this driver on Raspberry Pi you need to set correct platform in Makefile.
 Change
 ```
