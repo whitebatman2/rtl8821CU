@@ -1020,8 +1020,9 @@ typedef enum _HT_CAP_AMPDU_DENSITY {
 /*
  * This line is commented to fix compilation warning when built against Linux 4.19 
  */
-// #define IEEE80211_MAX_AMPDU_BUF 0x40
-
+ #if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 19, 0))
+#define IEEE80211_MAX_AMPDU_BUF 0x40
+#endif
 
 /* Spatial Multiplexing Power Save Modes */
 #define WLAN_HT_CAP_SM_PS_STATIC		0
