@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright(c) 2015 - 2016 Realtek Corporation. All rights reserved.
+ * Copyright(c) 2016 - 2017 Realtek Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
@@ -11,12 +11,7 @@
  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
- *
- *
- ******************************************************************************/
+ *****************************************************************************/
 #define _RTL8821CU_OPS_C_
 
 #include <drv_types.h>			/* PADAPTER, basic_types.h and etc. */
@@ -39,11 +34,12 @@ void rtl8821cu_set_hw_type(struct dvobj_priv *pdvobj)
 	RTW_INFO("CHIP TYPE: RTL8821C\n");
 }
 
-static void sethwreg(PADAPTER padapter, u8 variable, u8 *val)
+static u8 sethwreg(PADAPTER padapter, u8 variable, u8 *val)
 {
 	HAL_DATA_TYPE *pHalData = GET_HAL_DATA(padapter);
 	struct pwrctrl_priv *pwrctl = adapter_to_pwrctl(padapter);
 	struct dvobj_priv	*pdvobjpriv = adapter_to_dvobj(padapter);
+	u8 ret = _SUCCESS;
 	u8 tmp1Byte = 0, tmp1Byte2 = 0;
 
 
@@ -116,10 +112,11 @@ static void sethwreg(PADAPTER padapter, u8 variable, u8 *val)
 		break;
 
 	default:
-		rtl8821c_sethwreg(padapter, variable, val);
+		ret = rtl8821c_sethwreg(padapter, variable, val);
 		break;
 	}
 
+	return ret;
 }
 
 static void gethwreg(PADAPTER padapter, u8 variable, u8 *val)
@@ -200,6 +197,35 @@ static u8 rtl8821cu_ps_func(PADAPTER padapter, HAL_INTF_PS_FUNC efunc_id, u8 *va
 	return bResult;
 }
 
+#ifdef CONFIG_RTW_LED
+static void read_ledsetting(PADAPTER adapter)
+{
+	struct led_priv *ledpriv = adapter_to_led(adapter);
+
+#ifdef CONFIG_RTW_SW_LED
+	PHAL_DATA_TYPE hal;
+
+	hal = GET_HAL_DATA(adapter);
+	ledpriv->bRegUseLed = _TRUE;
+
+	switch (hal->EEPROMCustomerID) {
+	default:
+		hal->CustomerID = RT_CID_DEFAULT;
+		break;
+	}
+
+	switch (hal->CustomerID) {
+	case RT_CID_DEFAULT:
+	default:
+		ledpriv->LedStrategy = SW_LED_MODE9;
+		break;
+	}
+#else /* HW LED */
+	ledpriv->LedStrategy = HW_LED;
+#endif /* CONFIG_RTW_SW_LED */
+}
+#endif /* CONFIG_RTW_LED */
+
 /*
  * Description:
  *	Collect all hardware information, fill "HAL_DATA_TYPE".
@@ -211,10 +237,13 @@ static u8 rtl8821cu_ps_func(PADAPTER padapter, HAL_INTF_PS_FUNC efunc_id, u8 *va
  */
 static u8 read_adapter_info(PADAPTER padapter)
 {
+	u8 ret = _FAIL;
+
 	/*
 	 * 1. Read Efuse/EEPROM to initialize
 	 */
-	rtl8821c_read_efuse(padapter);
+	if (rtl8821c_read_efuse(padapter) != _SUCCESS)
+		goto exit;
 
 	/*
 	 * 2. Read registers to initialize
@@ -223,8 +252,14 @@ static u8 read_adapter_info(PADAPTER padapter)
 	/*
 	 * 3. Other Initialization
 	 */
+#ifdef CONFIG_RTW_LED
+	read_ledsetting(padapter);
+#endif /* CONFIG_RTW_LED */
 
-	return _SUCCESS;
+	ret = _SUCCESS;
+
+exit:
+	return ret;
 }
 
 
@@ -256,12 +291,9 @@ u8 rtl8821cu_set_hal_ops(PADAPTER padapter)
 
 	ops->init_recv_priv = rtl8821cu_init_recv_priv;
 	ops->free_recv_priv = rtl8821cu_free_recv_priv;
-#ifdef CONFIG_SW_LED
+#ifdef CONFIG_RTW_SW_LED
 	ops->InitSwLeds = rtl8821cu_initswleds;
 	ops->DeInitSwLeds = rtl8821cu_deinitswleds;
-#else
-	ops->InitSwLeds = NULL;
-	ops->DeInitSwLeds = NULL;
 #endif
 
 	ops->init_default_value = rtl8821cu_init_default_value;

@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright(c) 2007 - 2011 Realtek Corporation. All rights reserved.
+ * Copyright(c) 2007 - 2017 Realtek Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
@@ -11,12 +11,7 @@
  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
- *
- *
- ******************************************************************************/
+ *****************************************************************************/
 #ifndef __HAL_SDIO_H_
 #define __HAL_SDIO_H_
 
@@ -32,5 +27,17 @@ bool sdio_power_on_check(PADAPTER padapter);
 #ifdef CONFIG_FW_C2H_REG
 void sd_c2h_hisr_hdl(_adapter *adapter);
 #endif
+
+#if defined(CONFIG_RTL8188F) || defined (CONFIG_RTL8188GTV) || defined (CONFIG_RTL8192F)
+#define SDIO_LOCAL_CMD_ADDR(addr) ((SDIO_LOCAL_DEVICE_ID << 13) | ((addr) & SDIO_LOCAL_MSK))
+#endif
+
+#ifdef CONFIG_SDIO_CHK_HCI_RESUME
+bool sdio_chk_hci_resume(struct intf_hdl *pintfhdl);
+void sdio_chk_hci_suspend(struct intf_hdl *pintfhdl);
+#else
+#define sdio_chk_hci_resume(pintfhdl) _FALSE
+#define sdio_chk_hci_suspend(pintfhdl) do {} while (0)
+#endif /* CONFIG_SDIO_CHK_HCI_RESUME */
 
 #endif /* __HAL_SDIO_H_ */
