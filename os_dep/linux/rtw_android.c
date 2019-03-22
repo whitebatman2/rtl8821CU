@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright(c) 2007 - 2011 Realtek Corporation. All rights reserved.
+ * Copyright(c) 2007 - 2017 Realtek Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
@@ -11,12 +11,7 @@
  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
- *
- *
- ******************************************************************************/
+ *****************************************************************************/
 
 #ifdef CONFIG_GPIO_WAKEUP
 #include <linux/gpio.h>
@@ -98,6 +93,7 @@ const char *android_wifi_cmd_str[ANDROID_WIFI_CMD_MAX] = {
 #endif /* CONFIG_GTK_OL */
 /*	Private command for	P2P disable*/
 	"P2P_DISABLE",
+	"SET_AEK",
 	"DRIVER_VERSION"
 };
 
@@ -310,7 +306,10 @@ int rtw_android_cfg80211_pno_setup(struct net_device *net,
 		memcpy(pno_ssids_local[index].SSID, ssids[index].ssid,
 		       ssids[index].ssid_len);
 	}
-
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 2, 0)
+	if(ssids)
+		rtw_mfree((u8 *)ssids, (n_ssids * sizeof(struct cfg80211_ssid)));
+#endif
 	pno_time = (interval / 1000);
 
 	RTW_INFO("%s: nssids: %d, pno_time=%d\n", __func__, nssid, pno_time);
@@ -381,8 +380,6 @@ int rtw_android_get_rssi(struct net_device *net, char *command, int total_len)
 int rtw_android_get_link_speed(struct net_device *net, char *command, int total_len)
 {
 	_adapter *padapter = (_adapter *)rtw_netdev_priv(net);
-	struct	mlme_priv	*pmlmepriv = &(padapter->mlmepriv);
-	struct	wlan_network	*pcur_network = &pmlmepriv->cur_network;
 	int bytes_written = 0;
 	u16 link_speed = 0;
 
@@ -394,7 +391,6 @@ int rtw_android_get_link_speed(struct net_device *net, char *command, int total_
 
 int rtw_android_get_macaddr(struct net_device *net, char *command, int total_len)
 {
-	_adapter *adapter = (_adapter *)rtw_netdev_priv(net);
 	int bytes_written = 0;
 
 	bytes_written = snprintf(command, total_len, "Macaddr = "MAC_FMT, MAC_ARG(net->dev_addr));
@@ -566,6 +562,38 @@ int rtw_gtk_offload(struct net_device *net, u8 *cmd_ptr)
 }
 #endif /* CONFIG_GTK_OL */
 
+#ifdef CONFIG_RTW_MESH_AEK
+static int rtw_android_set_aek(struct net_device *ndev, char *command, int total_len)
+{
+#define SET_AEK_DATA_LEN (ETH_ALEN + 32)
+
+	_adapter *adapter = (_adapter *)rtw_netdev_priv(ndev);
+	u8 *addr;
+	u8 *aek;
+	int err = 0;
+
+	if (total_len - strlen(android_wifi_cmd_str[ANDROID_WIFI_CMD_SET_AEK]) - 1 != SET_AEK_DATA_LEN) {
+		err = -EINVAL;
+		goto exit;
+	}
+
+	addr = command + strlen(android_wifi_cmd_str[ANDROID_WIFI_CMD_SET_AEK]) + 1;
+	aek = addr + ETH_ALEN;
+
+	RTW_PRINT(FUNC_NDEV_FMT" addr="MAC_FMT"\n"
+		, FUNC_NDEV_ARG(ndev), MAC_ARG(addr));
+	if (0)
+		RTW_PRINT(FUNC_NDEV_FMT" aek="KEY_FMT KEY_FMT"\n"
+			, FUNC_NDEV_ARG(ndev), KEY_ARG(aek), KEY_ARG(aek + 16));
+
+	if (rtw_mesh_plink_set_aek(adapter, addr, aek) != _SUCCESS)
+		err = -ENOENT;
+
+exit:
+	return err;
+}
+#endif /* CONFIG_RTW_MESH_AEK */
+
 int rtw_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 {
 	int ret = 0;
@@ -625,11 +653,13 @@ int rtw_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 		ret = -ENOMEM;
 		goto exit;
 	}
+		
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0))
 	if (!access_ok(priv_cmd.buf, priv_cmd.total_len)) {
 #else
 	if (!access_ok(VERIFY_READ, priv_cmd.buf, priv_cmd.total_len)) {
 #endif
+	// if (VENDOR_READ, priv_cmd.buf, priv_cmd.total_len) {
 		RTW_INFO("%s: failed to access memory\n", __FUNCTION__);
 		ret = -EFAULT;
 		goto exit;
@@ -861,19 +891,19 @@ int rtw_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 
 #if CONFIG_RTW_MACADDR_ACL
 	case ANDROID_WIFI_CMD_HOSTAPD_SET_MACADDR_ACL: {
-		rtw_set_macaddr_acl(padapter, get_int_from_command(command));
+		rtw_set_macaddr_acl(padapter, RTW_ACL_PERIOD_BSS, get_int_from_command(command));
 		break;
 	}
 	case ANDROID_WIFI_CMD_HOSTAPD_ACL_ADD_STA: {
 		u8 addr[ETH_ALEN] = {0x00};
 		macstr2num(addr, command + strlen("HOSTAPD_ACL_ADD_STA") + 3);	/* 3 is space bar + "=" + space bar these 3 chars */
-		rtw_acl_add_sta(padapter, addr);
+		rtw_acl_add_sta(padapter, RTW_ACL_PERIOD_BSS, addr);
 		break;
 	}
 	case ANDROID_WIFI_CMD_HOSTAPD_ACL_REMOVE_STA: {
 		u8 addr[ETH_ALEN] = {0x00};
 		macstr2num(addr, command + strlen("HOSTAPD_ACL_REMOVE_STA") + 3);	/* 3 is space bar + "=" + space bar these 3 chars */
-		rtw_acl_remove_sta(padapter, addr);
+		rtw_acl_remove_sta(padapter, RTW_ACL_PERIOD_BSS, addr);
 		break;
 	}
 #endif /* CONFIG_RTW_MACADDR_ACL */
@@ -884,14 +914,17 @@ int rtw_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 #endif /* CONFIG_GTK_OL		 */
 	case ANDROID_WIFI_CMD_P2P_DISABLE: {
 #ifdef CONFIG_P2P
-		struct mlme_ext_priv	*pmlmeext = &padapter->mlmeextpriv;
-		u8 channel, ch_offset;
-		u16 bwmode;
-
 		rtw_p2p_enable(padapter, P2P_ROLE_DISABLE);
 #endif /* CONFIG_P2P */
 		break;
 	}
+
+#ifdef CONFIG_RTW_MESH_AEK
+	case ANDROID_WIFI_CMD_SET_AEK:
+		bytes_written = rtw_android_set_aek(net, command, priv_cmd.total_len);
+		break;
+#endif
+	
 	case ANDROID_WIFI_CMD_DRIVERVERSION: {
 		bytes_written = strlen(DRIVERVERSION);
 		snprintf(command, bytes_written + 1, DRIVERVERSION);
@@ -1059,8 +1092,8 @@ static int wifi_probe(struct platform_device *pdev)
 		wifi_wake_gpio = wifi_irqres->start;
 
 #ifdef CONFIG_GPIO_WAKEUP
-	printk("%s: gpio:%d wifi_wake_gpio:%d\n", __func__,
-	       wifi_irqres->start, wifi_wake_gpio);
+	RTW_INFO("%s: gpio:%d wifi_wake_gpio:%d\n", __func__,
+	       (int)wifi_irqres->start, wifi_wake_gpio);
 
 	if (wifi_wake_gpio > 0) {
 #ifdef CONFIG_PLATFORM_INTEL_BYT
@@ -1070,10 +1103,10 @@ static int wifi_probe(struct platform_device *pdev)
 		gpio_direction_input(wifi_wake_gpio);
 		oob_irq = gpio_to_irq(wifi_wake_gpio);
 #endif /* CONFIG_PLATFORM_INTEL_BYT */
-		printk("%s oob_irq:%d\n", __func__, oob_irq);
+		RTW_INFO("%s oob_irq:%d\n", __func__, oob_irq);
 	} else if (wifi_irqres) {
 		oob_irq = wifi_irqres->start;
-		printk("%s oob_irq:%d\n", __func__, oob_irq);
+		RTW_INFO("%s oob_irq:%d\n", __func__, oob_irq);
 	}
 #endif
 	wifi_control_data = wifi_ctrl;
@@ -1101,6 +1134,14 @@ static void shutdown_card(void)
 #ifdef CONFIG_FWLPS_IN_IPS
 	LeaveAllPowerSaveMode(g_test_adapter);
 #endif /* CONFIG_FWLPS_IN_IPS */
+
+#ifdef CONFIG_WOWLAN
+#ifdef CONFIG_GPIO_WAKEUP
+	/*default wake up pin change to BT*/
+	RTW_INFO("%s:default wake up pin change to BT\n", __FUNCTION__);
+	rtw_hal_switch_gpio_wl_ctrl(g_test_adapter, WAKEUP_GPIO_IDX, _FALSE);
+#endif /* CONFIG_GPIO_WAKEUP */
+#endif /* CONFIG_WOWLAN */
 
 	/* Leave SDIO HCI Suspend */
 	addr = 0x10250086;

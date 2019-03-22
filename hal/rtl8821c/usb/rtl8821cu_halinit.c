@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright(c) 2015 - 2016 Realtek Corporation. All rights reserved.
+ * Copyright(c) 2016 - 2017 Realtek Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
@@ -11,12 +11,7 @@
  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
- *
- *
- ******************************************************************************/
+ *****************************************************************************/
 #define _RTL8821CU_HALINIT_C_
 
 #include <hal_data.h>			/* HAL DATA */
@@ -45,22 +40,45 @@ static void _dbg_dump_macreg(PADAPTER padapter)
 	}
 }
 
+static void init_hwled(PADAPTER adapter, u8 enable)
+{
+	u8 mode = 0;
+	struct led_priv *ledpriv = adapter_to_led(adapter);
+
+	if (ledpriv->LedStrategy != HW_LED)
+		return;
+
+	rtw_halmac_led_cfg(adapter_to_dvobj(adapter), enable, mode);
+}
+
+static void hal_init_misc(PADAPTER adapter)
+{
+#ifdef CONFIG_RTW_LED
+	init_hwled(adapter, 1);
+#endif /* CONFIG_RTW_LED */
+
+}
+
 u32 rtl8821cu_hal_init(PADAPTER padapter)
 {
 	u8 status = _SUCCESS;
-	u32 init_start_time = rtw_get_current_time();
+	systime init_start_time = rtw_get_current_time();
 
 	if (_FALSE == rtl8821c_hal_init(padapter))
 		return _FAIL;
+
+	hal_init_misc(padapter);
 
 	RTW_INFO("%s in %dms\n", __func__, rtw_get_passing_time_ms(init_start_time));
 
 	return status;
 }
 
-static void hal_deinit_misc(PADAPTER padapter)
+static void hal_deinit_misc(PADAPTER adapter)
 {
-
+#ifdef CONFIG_RTW_LED
+	init_hwled(adapter, 0);
+#endif /* CONFIG_RTW_LED */
 }
 
 u32 rtl8821cu_hal_deinit(PADAPTER padapter)
@@ -243,7 +261,7 @@ void rtl8821cu_interface_configure(PADAPTER padapter)
 #ifdef CONFIG_USB_TX_AGGREGATION
 	/* according to value defined by halmac */
 	pHalData->UsbTxAggMode		= 1;
-	pHalData->UsbTxAggDescNum	= HALMAC_BLK_DESC_NUM_8821C;
+	rtw_halmac_usb_get_txagg_desc_num(pdvobjpriv, &pHalData->UsbTxAggDescNum);
 #endif /* CONFIG_USB_TX_AGGREGATION */
 
 #ifdef CONFIG_USB_RX_AGGREGATION

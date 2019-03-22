@@ -1,54 +1,79 @@
-# rtl8821CU
-[![Build Status](https://travis-ci.org/whitebatman2/rtl8821CU.svg?branch=master)](https://travis-ci.org/whitebatman2/rtl8821CU)
+# Realtek RTL8811CU/RTL8821CU USB wifi adapter driver version 5.4.1 for Linux <= 5.1rc1
 
-Drivers for rtl8811CU and rtl8821CU Wi-Fi chipsets. This repository is based on soruce code found on a CD shipped with a rtl8811CU based card. It's updated to build on newer kernel versions.
+Taken from: https://github.com/brektrou/rtl8821CU
+
+Before build this driver make sure `make`, `gcc`, `linux-header` and `git` have been installed.
+
+## First, clone this repository
+
+```
+mkdir -p ~/build
+cd ~/build
+git clone https://github.com/rockyprabowo/rtl8821CU.git
+```
 
 ## Build and install with DKMS
 
-DKMS is a system which will automatically recompile and install a kernel module when a new kernel gets installed or updated. To make use of DKMS, install the dkms package, which on Debian (based) systems is done like this:
+DKMS is a system which will automatically recompile and install a kernel module when a new kernel gets installed or updated. To make use of DKMS, install the dkms package.
 
-    apt-get install dkms
+### Debian/Ubuntu and derivates:
 
-To make use of the DKMS feature with this project, do the following:
+```
+sudo apt-get install dkms
+```
 
-    DRV_NAME=rtl8821CU
-    DRV_VERSION=5.2.5.3
-    sudo mkdir /usr/src/${DRV_NAME}-${DRV_VERSION}
-    git archive master | sudo tar -x -C /usr/src/${DRV_NAME}-${DRV_VERSION}
-    sudo dkms add -m ${DRV_NAME} -v ${DRV_VERSION}
-    sudo dkms build -m ${DRV_NAME} -v ${DRV_VERSION}
-    sudo dkms install -m ${DRV_NAME} -v ${DRV_VERSION}
+### Arch Linux and derivates:
 
-If you later on want to remove it again, do the following:
+```
+sudo pacman -S dkms
+```
 
-    DRV_NAME=rtl8821CU
-    DRV_VERSION=5.2.5.3
-    sudo dkms remove ${DRV_NAME}/${DRV_VERSION} --all
+To make use of the **DKMS** feature with this project, do the following:
+
+```
+DRV_NAME=rtl8821CU
+DRV_VERSION=5.4.1
+sudo cp -r ~/build/${DRV_NAME} /usr/src/${DRV_NAME}-${DRV_VERSION}
+sudo dkms add -m ${DRV_NAME} -v ${DRV_VERSION}
+sudo dkms build -m ${DRV_NAME} -v ${DRV_VERSION}
+sudo dkms install -m ${DRV_NAME} -v ${DRV_VERSION}
+```
+
+If you later on want to remove it, do the following:
+
+```
+DRV_NAME=rtl8821CU
+DRV_VERSION=5.4.1
+sudo dkms remove ${DRV_NAME}/${DRV_VERSION} --all
+```
 
 ## Build and install without DKMS
-Use following commands in source directory:
+
+Use following commands:
+
 ```
+cd ~/build/rtl8821CU
 make
 sudo make install
-sudo modprobe 8821cu
 ```
-## Raspberry Pi
-To build this driver on Raspberry Pi you need to set correct platform in Makefile.
-Change
+
+If you later on want to remove it, do the following:
+
 ```
-CONFIG_PLATFORM_I386_PC = y
-CONFIG_PLATFORM_ARM_RPI = n
-CONFIG_PLATFORM_ARM_RPI3 = n
+cd ~/build/rtl8821CU
+sudo make uninstall
 ```
-to
+
+## Checking installed driver
+
+If you successfully install the driver, the driver is installed on `/lib/modules/<linux version>/kernel/drivers/net/wireless/realtek/rtl8821cu`. Check the driver with the `ls` command:
+
 ```
-CONFIG_PLATFORM_I386_PC = n
-CONFIG_PLATFORM_ARM_RPI = y
-CONFIG_PLATFORM_ARM_RPI3 = n
+ls /lib/modules/$(uname -r)/kernel/drivers/net/wireless/realtek/rtl8821cu
 ```
-For the Raspberry Pi 3 you need to change it to
-```
-CONFIG_PLATFORM_I386_PC = n
-CONFIG_PLATFORM_ARM_RPI = n
-CONFIG_PLATFORM_ARM_RPI3 = y
-```
+
+Make sure `8821cu.ko` file present on that directory
+
+### Check with **DKMS** (if installing via **DKMS**):
+
+`sudo dkms status`

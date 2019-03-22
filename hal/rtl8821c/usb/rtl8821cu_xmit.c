@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright(c) 2015 - 2016 Realtek Corporation. All rights reserved.
+ * Copyright(c) 2016 - 2017 Realtek Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
@@ -11,12 +11,7 @@
  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
- *
- *
- ******************************************************************************/
+ *****************************************************************************/
 #define _RTL8821CU_XMIT_C_
 
 #include <drv_types.h>			/* PADAPTER, rtw_xmit.h and etc. */
@@ -32,7 +27,7 @@ static void update_txdesc_h2c_pkt(struct xmit_frame *pxmitframe, u8 *pmem, s32 s
 
 	_rtw_memset(ptxdesc, 0, TXDESC_SIZE);
 	SET_TX_DESC_TXPKTSIZE_8821C(ptxdesc, sz);
-	SET_TX_DESC_QSEL_8821C(ptxdesc, HALMAC_QUEUE_SELECT_CMD);
+	SET_TX_DESC_QSEL_8821C(ptxdesc, HALMAC_TXDESC_QSEL_H2C_CMD);
 	rtl8821c_cal_txdesc_chksum(padapter, ptxdesc);
 	rtl8821c_dbg_dump_tx_desc(padapter, pxmitframe->frame_tag, ptxdesc);
 }
@@ -52,13 +47,15 @@ static s32 update_txdesc(struct xmit_frame *pxmitframe, u8 *pmem, s32 sz, u8 bag
 	sint	bmcst = IS_MCAST(pattrib->ra);
 	u16	SWDefineContent = 0x0;
 	u8	DriverFixedRate = 0x0;
+#if defined(CONFIG_80211N_HT)
 	struct sta_info *psta = NULL;
 	u8 max_agg_num = 0;
 	u8 _max_ampdu_size = 0;
 	u8 ht_max_ampdu_size = 0;
 	u8 vht_max_ampdu_size = 0;
+#endif/*CONFIG_80211N_HT*/
 	struct dvobj_priv	*pdvobjpriv = adapter_to_dvobj(padapter);
-
+	u8 hw_port = rtw_hal_get_port(padapter);
 
 #ifndef CONFIG_USE_USB_BUFFER_ALLOC_TX
 	if (padapter->registrypriv.mp_mode == 0) {
@@ -91,8 +88,8 @@ static s32 update_txdesc(struct xmit_frame *pxmitframe, u8 *pmem, s32 sz, u8 bag
 	if (bmcst)
 		SET_TX_DESC_BMC_8821C(ptxdesc, 1);
 
-	SET_TX_DESC_PORT_ID_8821C(ptxdesc, padapter->hw_port);
-	SET_TX_DESC_MULTIPLE_PORT_8821C(ptxdesc, padapter->hw_port);
+	SET_TX_DESC_PORT_ID_8821C(ptxdesc, hw_port);
+	SET_TX_DESC_MULTIPLE_PORT_8821C(ptxdesc, hw_port);
 
 #ifndef CONFIG_USE_USB_BUFFER_ALLOC_TX
 	if (padapter->registrypriv.mp_mode == 0) {
@@ -116,10 +113,10 @@ static s32 update_txdesc(struct xmit_frame *pxmitframe, u8 *pmem, s32 sz, u8 bag
 	/*offset 12 */
 	if (!pattrib->qos_en) {
 		/* HW sequence, to fix to use 0 queue. todo: 4AC packets to use auto queue select */
-		SET_TX_DESC_EN_HWSEQ_8821C(ptxdesc, 1); /* Hw set sequence number */
-		SET_TX_DESC_EN_HWEXSEQ_8821C(ptxdesc, 0);
 		SET_TX_DESC_DISQSELSEQ_8821C(ptxdesc, 1);
-		SET_TX_DESC_HW_SSN_SEL_8821C(ptxdesc, 0);
+		SET_TX_DESC_EN_HWSEQ_8821C(ptxdesc, 1); /* Hw set sequence number */
+		SET_TX_DESC_HW_SSN_SEL_8821C(ptxdesc, pattrib->hw_ssn_sel);
+		SET_TX_DESC_EN_HWEXSEQ_8821C(ptxdesc, 0);
 	} else
 		SET_TX_DESC_SW_SEQ_8821C(ptxdesc, pattrib->seqnum);
 
@@ -141,6 +138,9 @@ static s32 update_txdesc(struct xmit_frame *pxmitframe, u8 *pmem, s32 sz, u8 bag
 		if (bmcst)
 			fill_txdesc_force_bmc_camid(pattrib, ptxdesc);
 #endif
+#ifdef CONFIG_SUPPORT_DYNAMIC_TXPWR
+		rtw_phydm_set_dyntxpwr(padapter, ptxdesc, pattrib->mac_id);
+#endif
 
 		if ((pattrib->ether_type != 0x888e) &&
 		    (pattrib->ether_type != 0x0806) &&
@@ -151,6 +151,7 @@ static s32 update_txdesc(struct xmit_frame *pxmitframe, u8 *pmem, s32 sz, u8 bag
 #endif
 		   ) {
 			/* Non EAP & ARP & DHCP type data packet */
+#if defined(CONFIG_80211N_HT)
 			if (pattrib->ampdu_en == _TRUE) {
 				SET_TX_DESC_AGG_EN_8821C(ptxdesc, 1);
 				if (padapter->driver_tx_max_agg_num != 0xFF) {
@@ -199,6 +200,7 @@ static s32 update_txdesc(struct xmit_frame *pxmitframe, u8 *pmem, s32 sz, u8 bag
 				/* Set A-MPDU aggregation */
 				SET_TX_DESC_AMPDU_DENSITY_8821C(ptxdesc, pattrib->ampdu_spacing);
 			} else
+#endif/*CONFIG_80211N_HT*/
 				SET_TX_DESC_BK_8821C(ptxdesc, 1);
 
 			rtl8821c_fill_txdesc_phy(padapter, pattrib, ptxdesc);
@@ -216,6 +218,10 @@ static s32 update_txdesc(struct xmit_frame *pxmitframe, u8 *pmem, s32 sz, u8 bag
 					SET_TX_DESC_DATA_SHORT_8821C(ptxdesc, 1);
 
 				SET_TX_DESC_DATARATE_8821C(ptxdesc, (pHalData->INIDATA_RATE[pattrib->mac_id] & 0x7F));
+			}
+			if (bmcst) {
+				DriverFixedRate = 0x01;
+				fill_txdesc_bmc_tx_rate(pattrib, ptxdesc);
 			}
 
 			/* modify data rate by iwpriv or proc */
@@ -238,6 +244,11 @@ static s32 update_txdesc(struct xmit_frame *pxmitframe, u8 *pmem, s32 sz, u8 bag
 			if (pattrib->stbc)
 				SET_TX_DESC_DATA_STBC_8821C(ptxdesc, 1);
 
+#ifdef CONFIG_WMMPS_STA
+			if (pattrib->trigger_frame)
+				SET_TX_DESC_TRI_FRAME_8821C (ptxdesc, 1);
+#endif /* CONFIG_WMMPS_STA */			
+
 		} else {
 			/*
 				EAP data packet and ARP packet and DHCP.
@@ -256,9 +267,21 @@ static s32 update_txdesc(struct xmit_frame *pxmitframe, u8 *pmem, s32 sz, u8 bag
 			SET_TX_DESC_DATARATE_8821C(ptxdesc, MRateToHwRate(pmlmeext->tx_rate));
 		}
 
+#ifdef CONFIG_TDLS
+#ifdef CONFIG_XMIT_ACK
+		/* CCX-TXRPT ack for xmit data frames */
+		if (pxmitframe->ack_report) {
+			SET_TX_DESC_SPE_RPT_8821C(ptxdesc, 1);
+#ifdef DBG_CCX
+			/* RTW_INFO("%s set tx report\n", __func__); */
+			RTW_INFO("%s set tx report\n", __func__);
+#endif
+		}
+#endif /* CONFIG_XMIT_ACK */
+#endif
 	} else if ((pxmitframe->frame_tag & 0x0f) == MGNT_FRAMETAG) {
 		/* RTW_INFO("pxmitframe->frame_tag == MGNT_FRAMETAG\n");	*/
-
+		SET_TX_DESC_MBSSID_8821C(ptxdesc, pattrib->mbssid & 0xF);
 		SET_TX_DESC_USE_RATE_8821C(ptxdesc, 1);
 		DriverFixedRate = 0x01;
 
@@ -271,7 +294,8 @@ static s32 update_txdesc(struct xmit_frame *pxmitframe, u8 *pmem, s32 sz, u8 bag
 			SET_TX_DESC_NAVUSEHDR_8821C(ptxdesc, 1);
 
 			SET_TX_DESC_DATA_BW_8821C(ptxdesc, rtl8821c_bw_mapping(padapter, pattrib));
-			SET_TX_DESC_RTS_SC_8821C(ptxdesc, rtl8821c_sc_mapping(padapter, pattrib));
+			SET_TX_DESC_SIGNALING_TA_PKT_SC_8821C(ptxdesc,
+					rtl8821c_sc_mapping(padapter, pattrib));
 
 			SET_TX_DESC_RTY_LMT_EN_8821C(ptxdesc, 1);
 			SET_TX_DESC_RTS_DATA_RTY_LMT_8821C(ptxdesc, 5);
@@ -339,6 +363,7 @@ s32 rtl8821cu_xmit_buf_handler(PADAPTER padapter)
 	PHAL_DATA_TYPE phal;
 	struct xmit_priv *pxmitpriv;
 	struct xmit_buf *pxmitbuf;
+	struct xmit_frame *pxmitframe;
 	s32 ret;
 
 
@@ -351,6 +376,10 @@ s32 rtl8821cu_xmit_buf_handler(PADAPTER padapter)
 	}
 
 	if (RTW_CANNOT_RUN(padapter)) {
+		RTW_DBG(FUNC_ADPT_FMT "- bDriverStopped(%s) bSurpriseRemoved(%s)\n",
+			FUNC_ADPT_ARG(padapter),
+			rtw_is_drv_stopped(padapter) ? "True" : "False",
+			rtw_is_surprise_removed(padapter) ? "True" : "False");
 			 return _FAIL;
 	}
 
@@ -368,9 +397,10 @@ s32 rtl8821cu_xmit_buf_handler(PADAPTER padapter)
 		pxmitbuf = dequeue_pending_xmitbuf(pxmitpriv);
 		if (pxmitbuf == NULL)
 			break;
-
+		pxmitframe = (struct xmit_frame *) pxmitbuf->priv_data;
 		/* only XMITBUF_DATA & XMITBUF_MGNT */
 		rtw_write_port_and_wait(padapter, pxmitbuf->ff_hwaddr, pxmitbuf->len, (unsigned char *)pxmitbuf, 500);
+		rtw_free_xmitframe(pxmitpriv, pxmitframe);
 	} while (1);
 
 #ifdef CONFIG_LPS_LCLK
@@ -446,11 +476,11 @@ static s32 rtw_dump_xframe(PADAPTER padapter, struct xmit_frame *pxmitframe)
 		pxmitbuf->len = w_sz;
 		pxmitbuf->ff_hwaddr = ff_hwaddr;
 
-		if (pxmitbuf->buf_tag  == XMITBUF_CMD)
+		if ((pattrib->qsel == QSLT_BEACON) || (pattrib->qsel == QSLT_CMD))
 			/* download rsvd page or fw */
 			inner_ret = rtw_write_port(padapter, ff_hwaddr, w_sz, (unsigned char *)pxmitbuf);
 		else
-		enqueue_pending_xmitbuf(pxmitpriv, pxmitbuf);
+			enqueue_pending_xmitbuf(pxmitpriv, pxmitbuf);
 #else
 		inner_ret = rtw_write_port(padapter, ff_hwaddr, w_sz, (unsigned char *)pxmitbuf);
 #endif
@@ -464,6 +494,9 @@ static s32 rtw_dump_xframe(PADAPTER padapter, struct xmit_frame *pxmitframe)
 
 	}
 
+#ifdef CONFIG_XMIT_THREAD_MODE
+	if ((pattrib->qsel == QSLT_BEACON) || (pattrib->qsel == QSLT_CMD))
+#endif
 	rtw_free_xmitframe(pxmitpriv, pxmitframe);
 
 	if (ret != _SUCCESS)
@@ -473,24 +506,6 @@ static s32 rtw_dump_xframe(PADAPTER padapter, struct xmit_frame *pxmitframe)
 }
 
 #ifdef CONFIG_USB_TX_AGGREGATION
-static u32 xmitframe_need_length(struct xmit_frame *pxmitframe)
-{
-	struct pkt_attrib *pattrib = &pxmitframe->attrib;
-
-	u32 len = 0;
-
-	/* no consider fragement */
-	len = pattrib->hdrlen + pattrib->iv_len +
-	      SNAP_SIZE + sizeof(u16) +
-	      pattrib->pktlen +
-	      ((pattrib->bswenc) ? pattrib->icv_len : 0);
-
-	if (pattrib->encrypt == _TKIP_)
-		len += 8;
-
-	return len;
-}
-
 #define IDEA_CONDITION 1	/* check all packets before enqueue */
 static s32 rtl8821cu_xmitframe_complete(PADAPTER padapter, struct xmit_priv *pxmitpriv, struct xmit_buf *pxmitbuf)
 {
@@ -586,7 +601,7 @@ static s32 rtl8821cu_xmitframe_complete(PADAPTER padapter, struct xmit_priv *pxm
 
 	/* 2. aggregate same priority and same DA(AP or STA) frames */
 	pfirstframe = pxmitframe;
-	len = xmitframe_need_length(pfirstframe) + TXDESC_SIZE + (pfirstframe->pkt_offset * PACKET_OFFSET_SZ);
+	len = rtw_wlan_pkt_size(pfirstframe) + TXDESC_SIZE + (pfirstframe->pkt_offset * PACKET_OFFSET_SZ);
 	pbuf_tail = len;
 	pbuf = _RND8(pbuf_tail);
 
@@ -658,7 +673,7 @@ static s32 rtl8821cu_xmitframe_complete(PADAPTER padapter, struct xmit_priv *pxm
 		pxmitframe->pkt_offset = 0; /* not first frame of aggregation, no need to reserve offset */
 #endif
 
-		len = xmitframe_need_length(pxmitframe) + TXDESC_SIZE + (pxmitframe->pkt_offset * PACKET_OFFSET_SZ);
+		len = rtw_wlan_pkt_size(pxmitframe) + TXDESC_SIZE + (pxmitframe->pkt_offset * PACKET_OFFSET_SZ);
 
 		if (_RND8(pbuf + len) > MAX_XMITBUF_SZ) {
 			/* RTW_INFO("%s: len> MAX_XMITBUF_SZ\n", __func__); */
@@ -772,7 +787,7 @@ agg_end:
 	pxmitbuf->len = pbuf_tail;
 	pxmitbuf->ff_hwaddr = ff_hwaddr;
 
-	if (pxmitbuf->buf_tag  == XMITBUF_CMD)
+	if (pfirstframe->attrib.qsel == QSLT_BEACON)
 		/* download rsvd page or fw */
 		rtw_write_port(padapter, ff_hwaddr, pbuf_tail, (u8 *)pxmitbuf);
 	else
@@ -788,6 +803,9 @@ agg_end:
 
 	rtw_count_tx_stats(padapter, pfirstframe, pbuf_tail);
 
+#ifdef CONFIG_XMIT_THREAD_MODE
+	if (pfirstframe->attrib.qsel == QSLT_BEACON)
+#endif
 	rtw_free_xmitframe(pxmitpriv, pfirstframe);
 
 	return _TRUE;
@@ -896,7 +914,7 @@ s32	rtl8821cu_init_xmit_priv(PADAPTER padapter)
 #ifdef CONFIG_TX_EARLY_MODE
 	pHalData->bEarlyModeEnable = padapter->registrypriv.early_mode;
 #endif
-
+	rtl8821c_init_xmit_priv(padapter);
 	return _SUCCESS;
 }
 

@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright(c) 2007 - 2015 Realtek Corporation. All rights reserved.
+ * Copyright(c) 2007 - 2017 Realtek Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
@@ -11,12 +11,7 @@
  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
- *
- *
- ******************************************************************************/
+ *****************************************************************************/
 /*#define CONFIG_DISABLE_ODM*/
 /*#define CONFIG_NO_FW*/
 
@@ -39,21 +34,17 @@
  */
 
 #define CONFIG_IEEE80211_BAND_5GHZ
+
 #define CONFIG_80211N_HT
+#define CONFIG_80211AC_VHT
+#ifdef CONFIG_80211AC_VHT
+	#ifndef CONFIG_80211N_HT
+		#define CONFIG_80211N_HT
+	#endif
+#endif
 
 #ifdef CONFIG_80211N_HT
-	#define CONFIG_80211AC_VHT
 	/* #define CONFIG_BEAMFORMING */
-
-	#ifdef CONFIG_BEAMFORMING
-		#define CONFIG_PHYDM_BEAMFORMING
-		#ifdef CONFIG_PHYDM_BEAMFORMING
-		#define BEAMFORMING_SUPPORT			1	/*for phydm beamforming*/
-		#define SUPPORT_MU_BF					0
-		#else
-		#define BEAMFORMING_SUPPORT			0	/*for driver beamforming*/
-		#endif
-	#endif
 #endif
 
 /* set CONFIG_IOCTL_CFG80211 from Makefile */
@@ -88,17 +79,13 @@
 
 #define CONFIG_RECV_REORDERING_CTRL
 
-/* #define CONFIG_TCP_CSUM_OFFLOAD_RX*/
-
-/* #define CONFIG_DRVEXT_MODULE*/
-
 #define CONFIG_DFS
 
  /* #define CONFIG_SUPPORT_USB_INT */
  #ifdef CONFIG_SUPPORT_USB_INT
 /* #define CONFIG_USB_INTERRUPT_IN_PIPE*/
 #endif
-
+#ifdef CONFIG_POWER_SAVING
 #define CONFIG_IPS
 #ifdef CONFIG_IPS
 /* #define CONFIG_IPS_LEVEL_2*/ /*enable this to set default IPS mode to IPS_LEVEL_2*/
@@ -113,7 +100,7 @@
 
 #ifdef CONFIG_LPS_LCLK
 	#ifdef CONFIG_POWER_SAVING
-		#define CONFIG_XMIT_THREAD_MODE
+		/* #define CONFIG_XMIT_THREAD_MODE */
 	#endif
 	#ifndef CONFIG_SUPPORT_USB_INT
 		#define LPS_RPWM_WAIT_MS 300
@@ -122,6 +109,10 @@
 	/* #define DBG_CHECK_FW_PS_STATE */
 #endif
 
+	#ifdef CONFIG_LPS
+		#define CONFIG_WMMPS_STA 1
+	#endif /* CONFIG_LPS */
+#endif /*CONFIG_POWER_SAVING*/
 /* before link */
 /* #define CONFIG_ANTENNA_DIVERSITY */
 
@@ -129,21 +120,6 @@
 #ifdef CONFIG_ANTENNA_DIVERSITY
 #define CONFIG_HW_ANTENNA_DIVERSITY
 #endif
-
-
-/*#define CONFIG_CONCURRENT_MODE*/
-#ifdef CONFIG_CONCURRENT_MODE
-	/* #define CONFIG_HWPORT_SWAP */				/* Port0->Sec , Port1->Pri */
-	/*#define CONFIG_RUNTIME_PORT_SWITCH*/
-	/* #define DBG_RUNTIME_PORT_SWITCH */
-	#define CONFIG_SCAN_BACKOP
-	#if 0
-	#ifdef CONFIG_RTL8812A
-		#define CONFIG_TSF_RESET_OFFLOAD 1		/* For 2 PORT TSF SYNC. */
-	#endif
-	#endif
-#endif
-
 
 #define CONFIG_AP_MODE
 #ifdef CONFIG_AP_MODE
@@ -176,7 +152,7 @@
 	/* #define CONFIG_P2P_IPS */
 	#define CONFIG_P2P_OP_CHK_SOCIAL_CH
 	#define CONFIG_CFG80211_ONECHANNEL_UNDER_CONCURRENT  /* replace CONFIG_P2P_CHK_INVITE_CH_LIST flag */
-	#define CONFIG_P2P_INVITE_IOT
+	/*#define CONFIG_P2P_INVITE_IOT*/
 #endif
 
 /*	Added by Kurt 20110511 */
@@ -195,15 +171,17 @@
 
 #define CONFIG_SKB_COPY	/* amsdu */
 
-#define CONFIG_LED
-#ifdef CONFIG_LED
-	#define CONFIG_SW_LED
-	#ifdef CONFIG_SW_LED
-		/* #define CONFIG_LED_HANDLED_BY_CMD_THREAD */
+#define CONFIG_RTW_LED
+#ifdef CONFIG_RTW_LED
+	#define CONFIG_RTW_SW_LED
+	#ifdef CONFIG_RTW_SW_LED
+		/* #define CONFIG_RTW_LED_HANDLED_BY_CMD_THREAD */
 	#endif
-#endif /* CONFIG_LED */
+#endif /* CONFIG_RTW_LED */
 
 #define CONFIG_GLOBAL_UI_PID
+
+/*#define CONFIG_RTW_80211K*/
 
 #define CONFIG_LAYER2_ROAMING
 #define CONFIG_LAYER2_ROAMING_RESUME
@@ -262,15 +240,12 @@
 
 #ifdef CONFIG_WOWLAN
 	#define CONFIG_GTK_OL
-	#define CONFIG_ARP_KEEP_ALIVE
-	#ifndef CONFIG_DEFAULT_PATTERNS_EN
-	#define CONFIG_DEFAULT_PATTERNS_EN
-	#endif
+	/* #define CONFIG_ARP_KEEP_ALIVE */
 #endif /* CONFIG_WOWLAN */
 
 #ifdef CONFIG_GPIO_WAKEUP
 	#ifndef WAKEUP_GPIO_IDX
-		#define WAKEUP_GPIO_IDX	10	/* WIFI Chip Side */
+		#define WAKEUP_GPIO_IDX	6	/* WIFI Chip Side */
 	#endif /* WAKEUP_GPIO_IDX */
 #endif /* CONFIG_GPIO_WAKEUP */
 
@@ -297,22 +272,6 @@
 /*
  * Platform  Related Config
  */
-#ifdef CONFIG_PLATFORM_MN10300
-	#define CONFIG_SPECIAL_SETTING_FOR_FUNAI_TV
-	#define CONFIG_USE_USB_BUFFER_ALLOC_RX
-
-	#if	defined(CONFIG_SW_ANTENNA_DIVERSITY)
-		#undef CONFIG_SW_ANTENNA_DIVERSITY
-		#define CONFIG_HW_ANTENNA_DIVERSITY
-	#endif
-
-	#if	defined(CONFIG_POWER_SAVING)
-		#undef CONFIG_POWER_SAVING
-	#endif
-
-#endif /* CONFIG_PLATFORM_MN10300 */
-
-
 #if defined(CONFIG_PLATFORM_ACTIONS_ATM702X)
 	#ifdef CONFIG_USB_TX_AGGREGATION
 		#undef CONFIG_USB_TX_AGGREGATION
@@ -342,10 +301,6 @@
 /* #define	CONFIG_TX_EARLY_MODE */
 #endif
 
-#define CONFIG_80211D
-
-#define CONFIG_ATTEMPT_TO_FIX_AP_BEACON_ERROR
-
 /*
  * Debug Related Config
  */
@@ -361,9 +316,9 @@
 
 /*#define DBG_IO*/
 /*#define DBG_DELAY_OS*/
-#ifndef DBG_MEM_ALLOC
-#define DBG_MEM_ALLOC
-#endif
+/*#ifndef DBG_MEM_ALLOC*/
+/*#define DBG_MEM_ALLOC*/
+/*#endif*/
 /*#define DBG_MEMORY_LEAK*/
 /*#define DBG_IOCTL*/
 
@@ -380,3 +335,4 @@
 /*#define DBG_ROAMING_TEST*/
 
 /*#define DBG_HAL_INIT_PROFILING*/
+/*#define DBG_FW_DEBUG_MSG_PKT*/  /* FW use this feature to tx debug broadcast pkt. This pkt include FW debug message*/

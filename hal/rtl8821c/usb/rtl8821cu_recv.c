@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright(c) 2015 - 2016 Realtek Corporation. All rights reserved.
+ * Copyright(c) 2016 - 2017 Realtek Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
@@ -11,12 +11,7 @@
  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
- *
- *
- ******************************************************************************/
+ *****************************************************************************/
 #define _RTL8821CU_RECV_C_
 
 #include <drv_types.h>			/* PADAPTER, rtw_xmit.h and etc. */
@@ -38,12 +33,14 @@ static u8 recvbuf2recvframe_proccess_normal_rx
 (PADAPTER padapter, u8 *pbuf, struct rx_pkt_attrib *pattrib, union recv_frame *precvframe, _pkt *pskb)
 {
 	u8 ret = _SUCCESS;
-	u8 *pphy_status = NULL;
 	struct recv_priv *precvpriv = &padapter->recvpriv;
 	_queue *pfree_recv_queue = &precvpriv->free_recv_queue;
 
 #ifdef CONFIG_RX_PACKET_APPEND_FCS
-	pattrib->pkt_len -= IEEE80211_FCS_LEN;
+	if (check_fwstate(&padapter->mlmepriv, WIFI_MONITOR_STATE) == _FALSE) {
+		if (rtl8821c_rx_fcs_appended(padapter))
+			pattrib->pkt_len -= IEEE80211_FCS_LEN;
+	}
 #endif
 
 	if (rtw_os_alloc_recvframe(padapter, precvframe,
@@ -56,17 +53,7 @@ static u8 recvbuf2recvframe_proccess_normal_rx
 
 	recvframe_put(precvframe, pattrib->pkt_len);
 
-	if (pattrib->physt)
-		pphy_status = (pbuf + RXDESC_OFFSET);
-
-#ifdef CONFIG_CONCURRENT_MODE
-	pre_recv_entry(precvframe, pphy_status);
-#endif /* CONFIG_CONCURRENT_MODE */
-
-	if (pattrib->physt && pphy_status)
-		rx_query_phy_status(precvframe, pphy_status);
-
-	rtw_recv_entry(precvframe);
+	pre_recv_entry(precvframe, pattrib->physt ? (pbuf + RXDESC_OFFSET) : NULL);
 
 exit:
 	return ret;

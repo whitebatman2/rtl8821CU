@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright(c) 2007 - 2011 Realtek Corporation. All rights reserved.
+ * Copyright(c) 2007 - 2017 Realtek Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
@@ -11,12 +11,7 @@
  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
- *
- *
- ******************************************************************************/
+ *****************************************************************************/
 /*
 
 The purpose of rtw_io.c
@@ -56,7 +51,7 @@ jackson@realtek.com.tw
 	#error "Shall be Linux or Windows, but not both!\n"
 #endif
 
-#ifdef CONFIG_SDIO_HCI
+#if defined(CONFIG_SDIO_HCI) || defined(CONFIG_PLATFORM_RTL8197D)
 	#define rtw_le16_to_cpu(val)		val
 	#define rtw_le32_to_cpu(val)		val
 	#define rtw_cpu_to_le16(val)		val
@@ -424,8 +419,12 @@ u32 _rtw_write_port_and_wait(_adapter *adapter, u32 addr, u32 cnt, u8 *pmem, int
 
 	ret = _rtw_write_port(adapter, addr, cnt, pmem);
 
-	if (ret == _SUCCESS)
+	if (ret == _SUCCESS) {
 		ret = rtw_sctx_wait(&sctx, __func__);
+
+		if (ret != _SUCCESS)
+			pxmitbuf->sctx = NULL;
+	}
 
 	return ret;
 }
