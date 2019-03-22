@@ -45,7 +45,7 @@ phydm_la_buffer_allocate(
 			ret = false;
 		} else
 			adc_smp_buf->length = adc_smp_buf->buffer_size;
-			ret = true;
+		ret = true;
 	}
 
 	return ret;
