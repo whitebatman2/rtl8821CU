@@ -3,6 +3,10 @@
 
 Drivers for rtl8811CU and rtl8821CU Wi-Fi chipsets. This repository is based on soruce code found on a CD shipped with a rtl8811CU based card. It's updated to build on newer kernel versions.
 
+## Deprecation notice
+
+This repository is archived and will probably never be supported in the future. Please consider switching to one of the forked repositories.
+
 ## Build and install with DKMS
 
 DKMS is a system which will automatically recompile and install a kernel module when a new kernel gets installed or updated. To make use of DKMS, install the dkms package, which on Debian (based) systems is done like this:
