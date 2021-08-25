@@ -1,7 +1,7 @@
 # rtl8821CU
 [![Build Status](https://travis-ci.org/whitebatman2/rtl8821CU.svg?branch=master)](https://travis-ci.org/whitebatman2/rtl8821CU)
 
-Drivers for rtl8811CU and rtl8821CU Wi-Fi chipsets. This repository is based on soruce code found on a CD shipped with a rtl8811CU based card. It's updated to build on newer kernel versions.
+Drivers for rtl8811CU and rtl8821CU Wi-Fi chipsets. This repository is based on source code found on a CD shipped with a rtl8811CU based card. It's updated to build on newer kernel versions.
 
 ## Deprecation notice
 
